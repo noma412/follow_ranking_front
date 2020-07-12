@@ -1,4 +1,4 @@
 module.exports = {
-  publicPath: '/twitter',
-  outputDir: 'twitter'
-}
+  publicPath: "/twitter_ranking/page",
+  outputDir: "page",
+};
