@@ -3,7 +3,7 @@
     <div class="loader-wrapper" :class="{ loading: loading }">
       <div class="loader">Loading...</div>
     </div>
-    <ranking />
+    <ranking @load="loadEvent" />
   </main>
 </template>
 
@@ -19,7 +19,11 @@ export default {
       loading: true,
     }
   },
-  methods: {},
+  methods: {
+    loadEvent(param) {
+      this.loading = param
+    },
+  },
 }
 </script>
 
@@ -48,10 +52,10 @@ html {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.5s;
-    // &.loading {
-    //   opacity: 1;
-    //   pointer-events: auto;
-    // }
+    &.loading {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
   .loader,
   .loader:before,

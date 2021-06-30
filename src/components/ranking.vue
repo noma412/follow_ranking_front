@@ -1,12 +1,37 @@
 <template>
   <section class="ranking">
     <h1>{{ msg }}</h1>
-    <section class="tab_area">
-      <div class="tab"></div>
-      <div class="tab"></div>
-    </section>
+    <!-- <section class="tab_area">
+      <v-tabs>
+        <v-tab>フォロー</v-tab>
+        <v-tab>フォロワー</v-tab>
+      </v-tabs>
+    </section> -->
+    <Datepicker
+      :language="ja"
+      class="calendar"
+      :format="DatePickerFormat"
+      :disabled-dates="disabledDates"
+      v-model="selectedDate"
+      @closed="dateSelected()"
+      placeholder="日付"
+    ></Datepicker>
     <section class="main_area">
+      <content-loader
+        v-if="isLoading"
+        class="main content_loader"
+        width="400"
+        height="100"
+      >
+        <rect x="48" y="8" rx="3" ry="3" width="340" height="6" />
+        <rect x="48" y="26" rx="3" ry="3" width="80" height="6" />
+        <rect x="47" y="52" rx="3" ry="3" width="342" height="6" />
+        <rect x="47" y="68" rx="3" ry="3" width="342" height="6" />
+        <rect x="47" y="84" rx="3" ry="3" width="120" height="6" />
+        <circle cx="20" cy="20" r="20" />
+      </content-loader>
       <a
+        v-else
         v-for="(tweet, index) in tweets"
         :key="index"
         :href="tweet.url"
@@ -16,7 +41,7 @@
       >
         <div class="number"></div>
         <div class="img_area">
-          <img :src="tweet.icon" alt />
+          <img :src="tweet.icon" alt loading="lazy" />
         </div>
         <div class="contents_area">
           <div class="title_area">
@@ -28,32 +53,39 @@
           </div>
           <div class="message_area">
             <p v-html="tweet.text"></p>
-            <div v-if="tweet.img" class="message_area_img">
-              <img :src="tweet.img" alt />
+            <div v-if="tweet.img.length > 0" class="message_area_img">
+              <img
+                v-for="(img, i) in tweet.img"
+                :key="i"
+                :src="img"
+                alt
+                loading="lazy"
+              />
             </div>
-            <div v-if="tweet.quoted_status" class="quote">
+            <div v-if="tweet.quote" class="quote">
               <div class="quote_header">
                 <div class="quote_img">
-                  <img :src="tweet.quoted_status.icon" alt />
+                  <img :src="tweet.quote.icon" alt loading="lazy" />
                 </div>
-                <div>
-                  <span class="quote_name">{{ tweet.quoted_status.name }}</span>
+                <div class="quote_title">
+                  <span class="quote_name">{{ tweet.quote.name }}</span>
                   <span class="quote_screen_name">
-                    @{{ tweet.quoted_status.screen_name }}
+                    @{{ tweet.quote.screen_name }}
                   </span>
                   <span class="quote_tweet_time">
-                    {{ tweet.quoted_status.time }}
+                    {{ tweet.quote.time }}
                   </span>
                 </div>
               </div>
-              <div
-                v-html="tweet.quoted_status.text"
-                class="quote_message_area"
-              ></div>
+              <div v-html="tweet.quote.text" class="quote_message_area"></div>
             </div>
           </div>
           <div class="icon_area">
-            <!-- <div><img src="../assets/img/comment.svg" alt /></div> -->
+            <div>
+              <img src="../assets/img/comment.svg" alt /><span>{{
+                tweet.retweet_count
+              }}</span>
+            </div>
             <div>
               <img src="../assets/img/retweet.svg" alt /><span>{{
                 tweet.retweet_count
@@ -68,6 +100,14 @@
         </div>
       </a>
     </section>
+    <transition name="fade">
+      <div v-show="error" class="dogeza">
+        <img src="../assets/img/dogeza.png" alt loading="lazy" />
+      </div>
+    </transition>
+    <transition name="fade">
+      <div v-show="scroll" class="scroll_top" @click="scrollTop">▲</div>
+    </transition>
   </section>
 </template>
 
@@ -75,7 +115,9 @@
 import firebase from 'firebase/app'
 import 'firebase/analytics'
 import 'firebase/auth'
-import 'firebase/firestore'
+import Datepicker from 'vuejs-datepicker'
+import { ja } from 'vuejs-datepicker/dist/locale'
+import { ContentLoader } from 'vue-content-loader'
 
 export default {
   name: 'ranking',
@@ -83,8 +125,22 @@ export default {
     return {
       provider: '',
       tweets: '',
-      msg: 'ランキング',
+      msg: 'ツイートランキング',
+      ja: ja,
+      DatePickerFormat: 'yyyy/MM/dd',
+      disabledDates: {
+        to: '',
+        from: '',
+      },
+      selectedDate: '',
+      isLoading: false,
+      error: false,
+      scroll: false,
     }
+  },
+  components: {
+    Datepicker,
+    ContentLoader,
   },
   created() {
     const firebaseConfig = {
@@ -97,48 +153,145 @@ export default {
       measurementId: 'G-G96JRJFNTS',
     }
     firebase.initializeApp(firebaseConfig)
-
-    firebase.auth().onAuthStateChanged(async (user) => {
+    firebase.auth().onAuthStateChanged((user) => {
       if (user) {
-        if (localStorage.getItem('tweets') !== null) {
-          this.tweets = JSON.parse(localStorage.getItem('tweets'))
-        } else {
-          this.provider = user.providerData[0]
-          const uid = user.providerData[0].uid
-          const response = await fetch('http://192.168.11.2:1000/twitter', {
-            method: 'POST',
-            cache: 'no-cache',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: uid, span: 1 }),
-          })
-          const tweets = await response.json()
-          this.tweets = tweets
-          localStorage.setItem('tweets', JSON.stringify(this.tweets))
-        }
+        let to = new Date()
+        let from = new Date()
+        to.setDate(to.getDate() - 8)
+        from.setDate(from.getDate() - 1)
+        this.disabledDates.to = to
+        this.disabledDates.from = from
+        this.selectedDate = from
+
+        this.provider = user.providerData[0]
+        this.updateRanking(false)
+
+        this.scrollEvent()
       } else {
         const provider = new firebase.auth.TwitterAuthProvider()
         firebase.auth().signInWithRedirect(provider)
       }
     })
   },
+  methods: {
+    dateSelected() {
+      this.isLoading = true
+      this.updateRanking(true)
+    },
+    async updateRanking(select) {
+      this.error = false
+      const date = select ? this.selectedDate : new Date()
+      if (!select) {
+        date.setDate(date.getDate() - 1)
+      }
+      const year = date.getFullYear()
+      let month = date.getMonth() + 1
+      month = month < 10 ? '0' + month : month
+      const day = date.getDate()
+      if (
+        localStorage.getItem(`tweets(${year}/${month}/${day})`) !== null &&
+        JSON.parse(localStorage.getItem(`tweets(${year}/${month}/${day})`))
+          .length > 1
+      ) {
+        this.tweets = JSON.parse(
+          localStorage.getItem(`tweets(${year}/${month}/${day})`)
+        )
+        setTimeout(() => {
+          this.isLoading = false
+        }, 200)
+        setTimeout(() => {
+          this.$emit('load', false)
+        }, 400)
+      } else {
+        const response = await fetch('http://192.168.11.2:1000/twitter', {
+          method: 'POST',
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: this.provider.uid,
+            date,
+          }),
+        })
+        const tweets = await response.json()
+        this.isLoading = false
+        setTimeout(() => {
+          this.$emit('load', false)
+        }, 400)
+        if (!tweets.error) {
+          this.tweets = tweets
+          localStorage.setItem(
+            `tweets(${year}/${month}/${day})`,
+            JSON.stringify(this.tweets)
+          )
+        } else {
+          if (
+            tweets.error.includes('invalid json') ||
+            tweets.error.includes('Rate limit')
+          ) {
+            alert(
+              'ごめんなさい、APIが活動限界です；；\n10分か15分休めば復活するかも。。 '
+            )
+          } else {
+            alert(
+              `何らかの理由で通信に失敗しました；；\nごめんなさいー！m(_ _)m`
+            )
+          }
+          this.selectedDate = ''
+          this.error = true
+        }
+      }
+    },
+    scrollTop() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      })
+    },
+    scrollEvent() {
+      const changePoint = 10
+      const _this = this
+      window.addEventListener('scroll', function() {
+        const scrollTop =
+          window.pageYOffset || document.documentElement.scrollTop
+        if (scrollTop > changePoint) {
+          _this.scroll = true
+        } else {
+          _this.scroll = false
+        }
+      })
+    },
+  },
 }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 .ranking {
-  padding: 40px 10px;
+  color: #0f1419;
+  padding: 40px 12px 40px 42px;
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto;
+  &.loading_ranking {
+    .number {
+      display: none;
+    }
+  }
   h1 {
     text-align: center;
     font-size: 20px;
     font-weight: bold;
   }
-  .main_area {
-    min-width: 340px;
+
+  .tab_area {
     max-width: 600px;
-    margin: 24px auto 0;
+    margin: 20px auto 0;
+  }
+
+  .main_area {
+    max-width: 600px;
+    margin: 20px auto 0;
     font-size: 16px;
     border: 1px solid rgb(235, 238, 240);
     border-radius: 4px;
@@ -147,8 +300,14 @@ export default {
       display: flex;
       padding: 12px 16px;
       border-bottom: 1px solid rgb(235, 238, 240);
-      cursor: pointer;
       position: relative;
+      transition: background-color 0.2s;
+      &:not(.content_loader) {
+        cursor: pointer;
+      }
+      &:hover:not(.content_loader) {
+        background-color: rgba(0, 0, 0, 0.03);
+      }
       &:last-of-type {
         border-bottom: none;
       }
@@ -170,13 +329,13 @@ export default {
         }
       }
     }
-    @for $value from 10 to 500 {
+    @for $value from 10 to 50 {
       .main_#{$value} .number {
         width: 50px;
         height: 50px;
         top: -22px;
         left: -32px;
-        background-color: #bbb;
+        background-color: #ccc;
         border-radius: 50%;
         &::after {
           font-family: '游ゴシック体', 'Yu Gothic', YuGothic, sans-serif;
@@ -209,12 +368,15 @@ export default {
     span:first-of-type {
       font-weight: bold;
       margin-right: 6px;
+      word-break: break-all;
     }
     span:nth-of-type(2) {
       margin-right: 4px;
+      word-break: break-all;
     }
     span:not(:first-of-type) {
       color: rgb(100, 120, 135);
+      word-break: keep-all;
     }
   }
 
@@ -233,15 +395,20 @@ export default {
     }
     &_img img {
       width: 100%;
+      background-color: rgba(28, 160, 242, 0.05);
+      &:not(:last-of-type) {
+        padding-bottom: 20px;
+      }
     }
     .quote {
       border: 1px solid rgb(196, 207, 214);
       border-radius: 16px;
-      padding: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
       &_header {
         display: flex;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         .quote_img {
           display: inline-block;
           img {
@@ -250,23 +417,22 @@ export default {
             border-radius: 50%;
           }
         }
-        span {
-          font-size: 14px;
+        .quote_title {
+          margin-left: 4.5px;
         }
         span:first-of-type {
           font-weight: bold;
-          margin-left: 4.5px;
           margin-right: 3px;
+          word-break: break-all;
         }
         span:nth-of-type(2) {
           margin-right: 3px;
+          word-break: break-all;
         }
         span:not(:first-of-type) {
           color: rgb(100, 120, 135);
+          word-break: keep-all;
         }
-      }
-      &_message_area {
-        font-size: 14px;
       }
     }
   }
@@ -286,6 +452,165 @@ export default {
       span {
         font-size: 12px;
         color: rgb(91, 112, 131);
+      }
+    }
+  }
+
+  .dogeza {
+    margin-top: 60px;
+    text-align: center;
+    img {
+      max-width: 100%;
+    }
+  }
+
+  .scroll_top {
+    width: 52px;
+    height: 52px;
+    line-height: 50px;
+    border-radius: 50%;
+    opacity: 0.6;
+    background: #1da1f2;
+    color: #fff;
+    position: fixed;
+    right: 48px;
+    bottom: 48px;
+    z-index: 10;
+    text-align: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    &:hover {
+      opacity: 1;
+    }
+  }
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.4s;
+  }
+  .fade-enter,
+  .fade-leave-to {
+    opacity: 0;
+  }
+}
+@media (max-width: 540px) {
+  .ranking {
+    padding: 30px 12px;
+    h1 {
+      font-size: 18px;
+    }
+    .main_area {
+      font-size: 14px;
+      margin-top: 16px;
+      .main {
+        padding: 10px 8px;
+        .number {
+          transform: scale(0.7);
+        }
+        .img_area {
+          width: 44px;
+          margin-right: 6px;
+          img {
+            width: 100%;
+          }
+        }
+        .icon_area {
+          & > div {
+            width: 80px;
+            @media (max-width: 359px) {
+              width: 70px;
+            }
+            img {
+              width: 18px;
+            }
+          }
+        }
+        .contents_area {
+          .message_area {
+            margin-top: 2px;
+            margin-bottom: 8px;
+            &_img {
+              margin-bottom: 8px;
+              img:not(:last-of-type) {
+                padding-bottom: 8px;
+              }
+            }
+          }
+        }
+        .quote {
+          font-size: 12px;
+          padding: 8px;
+          &_header {
+            margin-bottom: 4px;
+          }
+          .quote_img img {
+            width: 22px;
+            height: 22px;
+          }
+        }
+      }
+      @for $value from 0 to 10 {
+        .main_#{$value} .number {
+          top: -26px;
+          left: -20px;
+        }
+      }
+      @for $value from 10 to 50 {
+        .main_#{$value} .number {
+          top: -24px;
+          left: -18px;
+        }
+      }
+    }
+    .scroll_top {
+      right: 24px;
+      bottom: 36px;
+    }
+  }
+}
+</style>
+
+<style lang="scss">
+.ranking {
+  .tab_area {
+    color: #1da1f2;
+    .v-tab {
+      width: 50%;
+      font-weight: bold;
+      font-size: 16px;
+      &--active {
+        pointer-events: none;
+      }
+    }
+  }
+  .vdp-datepicker {
+    max-width: 600px;
+    margin: 20px auto 0;
+    & > div:first-of-type {
+      display: flex;
+      justify-content: flex-end;
+    }
+    input {
+      border: 1px solid rgb(235, 238, 240);
+      border-radius: 8px;
+      height: 36px;
+      line-height: 36px;
+      padding-left: 10px;
+      width: 140px;
+      cursor: pointer;
+      &::placeholder {
+        color: #aaa;
+        font-size: 15px;
+      }
+    }
+  }
+  @media (max-width: 540px) {
+    .vdp-datepicker {
+      margin-top: 16px;
+      input {
+        font-size: 14px;
+        width: 110px;
+        height: 32px;
+        border-radius: 6px;
       }
     }
   }
