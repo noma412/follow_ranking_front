@@ -1,8 +1,6 @@
 module.exports = {
-  publicPath: '/ff-ranking/',
-  outputDir: 'ff-ranking',
+  publicPath: '/',
+  outputDir: 'dist',
 
-  transpileDependencies: [
-    'vuetify'
-  ]
+  transpileDependencies: ['vuetify'],
 }

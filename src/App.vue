@@ -3,7 +3,19 @@
     <div class="loader-wrapper" :class="{ loading: loading }">
       <div class="loader">Loading...</div>
     </div>
-    <ranking @load="loadEvent" />
+    <div
+      class="error-modal-wrapper"
+      :class="{ error: error }"
+      @click="error = false"
+    >
+      <div class="error-modal">
+        <p v-html="errorText"></p>
+        <v-btn class="btn" color="#E3F2FD"
+          >OK<span style="padding-left:1px;">!</span></v-btn
+        >
+      </div>
+    </div>
+    <ranking @load="loadEvent" @error="errorEvent" />
   </main>
 </template>
 
@@ -17,11 +29,17 @@ export default {
   data() {
     return {
       loading: true,
+      error: false,
+      errorText: '',
     }
   },
   methods: {
     loadEvent(param) {
       this.loading = param
+    },
+    errorEvent(param) {
+      this.errorText = param
+      this.error = true
     },
   },
 }
@@ -97,6 +115,47 @@ html {
     40% {
       box-shadow: 0 -2em;
       height: 7em;
+    }
+  }
+  .error-modal-wrapper {
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    position: fixed;
+    z-index: 150;
+    transition: opacity 0.4s;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    &.error {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .error-modal {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 480px;
+      background-color: white;
+      border-radius: 20px;
+      padding-top: 30px;
+      padding-bottom: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      p {
+        font-size: 18px;
+        line-height: 1.5;
+        text-align: center;
+      }
+      .v-btn {
+        width: 100px;
+        height: 40px;
+        padding: 0 0 2px !important;
+        font-size: 18px;
+        margin-top: 20px;
+      }
     }
   }
 }

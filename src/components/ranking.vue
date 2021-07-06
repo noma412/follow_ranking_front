@@ -7,7 +7,7 @@
         <v-tab>フォロワー</v-tab>
       </v-tabs>
     </section> -->
-    <Datepicker
+    <!-- <Datepicker
       :language="ja"
       class="calendar"
       :format="DatePickerFormat"
@@ -15,7 +15,7 @@
       v-model="selectedDate"
       @closed="dateSelected()"
       placeholder="日付"
-    ></Datepicker>
+    ></Datepicker> -->
     <section class="main_area">
       <content-loader
         v-if="isLoading"
@@ -115,7 +115,7 @@
 import firebase from 'firebase/app'
 import 'firebase/analytics'
 import 'firebase/auth'
-import Datepicker from 'vuejs-datepicker'
+// import Datepicker from 'vuejs-datepicker'
 import { ja } from 'vuejs-datepicker/dist/locale'
 import { ContentLoader } from 'vue-content-loader'
 
@@ -125,7 +125,7 @@ export default {
     return {
       provider: '',
       tweets: '',
-      msg: 'ツイートランキング',
+      msg: '昨日人気だったツイート',
       ja: ja,
       DatePickerFormat: 'yyyy/MM/dd',
       disabledDates: {
@@ -139,7 +139,7 @@ export default {
     }
   },
   components: {
-    Datepicker,
+    // Datepicker,
     ContentLoader,
   },
   created() {
@@ -181,6 +181,10 @@ export default {
     async updateRanking(select) {
       this.error = false
       const date = select ? this.selectedDate : new Date()
+      if (!date) {
+        this.isLoading = false
+        return
+      }
       if (!select) {
         date.setDate(date.getDate() - 1)
       }
@@ -203,17 +207,20 @@ export default {
           this.$emit('load', false)
         }, 400)
       } else {
-        const response = await fetch('http://192.168.11.2:1000/twitter', {
-          method: 'POST',
-          cache: 'no-cache',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: this.provider.uid,
-            date,
-          }),
-        })
+        const response = await fetch(
+          'https://rly7n1jpug.execute-api.ap-northeast-1.amazonaws.com/default/FRB',
+          {
+            method: 'POST',
+            cache: 'no-cache',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: this.provider.uid,
+              date: date,
+            }),
+          }
+        )
         const tweets = await response.json()
         this.isLoading = false
         setTimeout(() => {
@@ -230,12 +237,14 @@ export default {
             tweets.error.includes('invalid json') ||
             tweets.error.includes('Rate limit')
           ) {
-            alert(
-              'ごめんなさい、APIが活動限界です；；\n10分か15分休めば復活するかも。。 '
+            this.$emit(
+              'error',
+              `APIが限界を迎えました！ごめんなさい！m(_ _)m<br>10分か15分後には復活しているはずです！！！`
             )
           } else {
-            alert(
-              `何らかの理由で通信に失敗しました；；\nごめんなさいー！m(_ _)m`
+            this.$emit(
+              'error',
+              `何らかの理由で通信に失敗しました。。<br>ごめんなさいー！m(_ _)m`
             )
           }
           this.selectedDate = ''
@@ -282,6 +291,7 @@ export default {
     text-align: center;
     font-size: 20px;
     font-weight: bold;
+    letter-spacing: 0.8px;
   }
 
   .tab_area {
@@ -291,7 +301,7 @@ export default {
 
   .main_area {
     max-width: 600px;
-    margin: 20px auto 0;
+    margin: 24px auto 0;
     font-size: 16px;
     border: 1px solid rgb(235, 238, 240);
     border-radius: 4px;
@@ -497,10 +507,11 @@ export default {
     padding: 30px 12px;
     h1 {
       font-size: 18px;
+      letter-spacing: 0.4px;
     }
     .main_area {
       font-size: 14px;
-      margin-top: 16px;
+      margin-top: 20px;
       .main {
         padding: 10px 8px;
         .number {
