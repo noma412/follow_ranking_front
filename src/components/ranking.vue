@@ -122,10 +122,14 @@ import { ContentLoader } from 'vue-content-loader'
 export default {
   name: 'ranking',
   data() {
+    const date = new Date()
+    date.setDate(date.getDate() - 1)
+    const month = date.getMonth() + 1
+    const day = date.getDate()
     return {
       provider: '',
       tweets: '',
-      msg: '昨日人気だったツイート',
+      msg: `${month}月${day}日のツイート`,
       ja: ja,
       DatePickerFormat: 'yyyy/MM/dd',
       disabledDates: {
@@ -189,8 +193,7 @@ export default {
         date.setDate(date.getDate() - 1)
       }
       const year = date.getFullYear()
-      let month = date.getMonth() + 1
-      month = month < 10 ? '0' + month : month
+      const month = date.getMonth() + 1
       const day = date.getDate()
       if (
         localStorage.getItem(`tweets(${year}/${month}/${day})`) !== null &&
