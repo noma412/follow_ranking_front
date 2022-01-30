@@ -12,6 +12,8 @@
 
 - Windows…Chrome, Edge, Firefox
 - Mac…Chrome, Safari
+- Android8 以上…Chrome
+- iOS12 以上…Safari
 
 **● 使用言語**
 
