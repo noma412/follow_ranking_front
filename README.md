@@ -1,29 +1,22 @@
-# ff-ranking
+# ツイートランキング
 
-## Project setup
+**● 機能**
 
-```
-yarn install
-```
+- フォローしている人のツイートをランキング形式で表示します。
+- 集計対象は前日分のツイートです。
+- いいね・リツイートの合計で順位を決めます。
+- ツイートをクリックでツイッターの該当ページに遷移します。
+- いいねやリツイート、リプライの機能はありません。
 
-### Compiles and hot-reloads for development
+**● 動作環境**
 
-```
-yarn serve
-```
+- Windows…Chrome, Edge, Firefox
+- Mac…Chrome, Safari
 
-### Compiles and minifies for production
+**● 使用言語**
 
-```
-yarn build
-```
+- Javascript
 
-### Lints and fixes files
+**● 使用フレームワーク**
 
-```
-yarn lint
-```
-
-### Customize configuration
-
-See [Configuration Reference](https://cli.vuejs.org/config/).
+- Vue
