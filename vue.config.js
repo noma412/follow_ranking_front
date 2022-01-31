@@ -1,6 +1,6 @@
 module.exports = {
-  publicPath: '/',
-  outputDir: 'dist',
+  publicPath: '/follow_ranking_front',
+  outputDir: 'build',
 
   transpileDependencies: ['vuetify'],
 }
