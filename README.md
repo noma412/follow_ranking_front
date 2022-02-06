@@ -22,3 +22,6 @@
 **● 使用フレームワーク**
 
 - Vue
+
+**● ウェブサイト**
+- https://noma412.github.io/follow_ranking_front/
